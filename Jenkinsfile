@@ -6,6 +6,7 @@ pipeline {
         AWS_REGION = 'ap-south-1'
         ECR_REPOSITORY = 'aws-node-cicd-lab-repo'
         ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        CONTAINER_NAME = 'node-app'
     }
 
     options {
@@ -50,6 +51,62 @@ pipeline {
                       | docker login --username AWS --password-stdin "$ECR_REGISTRY"
                     docker push "$IMAGE_URI"
                 '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    docker pull "$IMAGE_URI"
+                    docker rm -f "${CONTAINER_NAME}-previous" 2>/dev/null || true
+
+                    if docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+                        docker stop "$CONTAINER_NAME"
+                        docker rename "$CONTAINER_NAME" "${CONTAINER_NAME}-previous"
+                    fi
+
+                    if ! docker run -d \
+                      --name "$CONTAINER_NAME" \
+                      --restart unless-stopped \
+                      -p 80:3000 \
+                      "$IMAGE_URI"; then
+                        if docker container inspect "${CONTAINER_NAME}-previous" >/dev/null 2>&1; then
+                            docker rename "${CONTAINER_NAME}-previous" "$CONTAINER_NAME"
+                            docker start "$CONTAINER_NAME"
+                        fi
+                        exit 1
+                    fi
+                '''
+
+                script {
+                    def healthy = sh(
+                        script: '''
+                            for attempt in 1 2 3 4 5; do
+                                if curl --fail --silent http://127.0.0.1/health >/dev/null; then
+                                    exit 0
+                                fi
+                                sleep 2
+                            done
+                            exit 1
+                        ''',
+                        returnStatus: true
+                    ) == 0
+
+                    if (healthy) {
+                        sh 'docker rm "${CONTAINER_NAME}-previous" 2>/dev/null || true'
+                    } else {
+                        sh '''
+                            docker logs "$CONTAINER_NAME" || true
+                            docker rm -f "$CONTAINER_NAME" || true
+
+                            if docker container inspect "${CONTAINER_NAME}-previous" >/dev/null 2>&1; then
+                                docker rename "${CONTAINER_NAME}-previous" "$CONTAINER_NAME"
+                                docker start "$CONTAINER_NAME"
+                            fi
+                        '''
+                        error('Deployment health check failed; previous container restored when available.')
+                    }
+                }
             }
         }
     }
