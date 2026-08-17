@@ -1,3 +1,12 @@
+FROM node:20-alpine AS test
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY public ./public
+COPY src ./src
+COPY test ./test
+RUN npm test
+
 FROM node:20-alpine AS dependencies
 WORKDIR /app
 COPY package*.json ./
