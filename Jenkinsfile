@@ -18,9 +18,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
                 script {
-                    def shortCommit = env.GIT_COMMIT.take(7)
+                    def checkoutDetails = checkout scm
+                    def commit = checkoutDetails.GIT_COMMIT ?: sh(
+                        script: 'git rev-parse HEAD',
+                        returnStdout: true
+                    ).trim()
+                    def shortCommit = commit.take(7)
                     env.IMAGE_TAG = "git-${shortCommit}-build-${env.BUILD_NUMBER}"
                     env.IMAGE_URI = "${env.ECR_REGISTRY}/${env.ECR_REPOSITORY}:${env.IMAGE_TAG}"
                 }
@@ -56,7 +60,12 @@ pipeline {
         }
         always {
             sh 'docker logout "$ECR_REGISTRY" || true'
-            sh 'docker image rm "$ECR_REPOSITORY:test-$BUILD_NUMBER" "$IMAGE_URI" || true'
+            sh 'docker image rm "$ECR_REPOSITORY:test-$BUILD_NUMBER" 2>/dev/null || true'
+            script {
+                if (env.IMAGE_URI?.trim()) {
+                    sh 'docker image rm "$IMAGE_URI" 2>/dev/null || true'
+                }
+            }
             sh 'docker image prune -f || true'
         }
     }
