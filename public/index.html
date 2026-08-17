@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A one-page Node.js project for learning AWS CI/CD.">
+  <title>AWS DevOps Lab</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="card">
+    <div class="badge">NODE.JS • AWS • CI/CD</div>
+    <h1>Ship with confidence.</h1>
+    <p>
+      This one-page application is ready for our AWS DevOps lab—from source
+      control and automated tests to container build and deployment.
+    </p>
+    <div class="pipeline" aria-label="Deployment pipeline">
+      <span>Commit</span><b>→</b><span>Build</span><b>→</b><span>Test</span><b>→</b><span>Deploy</span>
+    </div>
+    <button id="healthButton" type="button">Check application health</button>
+    <output id="healthResult" aria-live="polite"></output>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

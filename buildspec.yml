@@ -1,0 +1,18 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - npm ci
+  pre_build:
+    commands:
+      - npm test
+  build:
+    commands:
+      - docker build -t aws-node-cicd-lab .
+
+artifacts:
+  files:
+    - '**/*'
