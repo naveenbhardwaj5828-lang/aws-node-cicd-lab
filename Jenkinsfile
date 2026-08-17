@@ -61,14 +61,14 @@ pipeline {
                     docker rm -f "${CONTAINER_NAME}-previous" 2>/dev/null || true
 
                     if docker container inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-                        docker stop "$CONTAINER_NAME"
+                        docker stop "$CONTAINER_NAME" 2>/dev/null || true
                         docker rename "$CONTAINER_NAME" "${CONTAINER_NAME}-previous"
                     fi
 
                     if ! docker run -d \
                       --name "$CONTAINER_NAME" \
                       --restart unless-stopped \
-                      -p 80:3000 \
+                      -p 3000:3000 \
                       "$IMAGE_URI"; then
                         if docker container inspect "${CONTAINER_NAME}-previous" >/dev/null 2>&1; then
                             docker rename "${CONTAINER_NAME}-previous" "$CONTAINER_NAME"
@@ -82,7 +82,7 @@ pipeline {
                     def healthy = sh(
                         script: '''
                             for attempt in 1 2 3 4 5; do
-                                if curl --fail --silent http://127.0.0.1/health >/dev/null; then
+                                if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then
                                     exit 0
                                 fi
                                 sleep 2
